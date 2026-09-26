@@ -9,20 +9,22 @@ import CharterView from './views/CharterView';
 import ModerationView from './views/ModerationView';
 import ProfileView from './views/ProfileView';
 
-type View = 'feed' | 'charter' | 'profile' | 'moderation';
+type View = 'home' | 'feed' | 'auth' | 'charter' | 'profile' | 'moderation';
 
 const FEED_ERROR = 'Impossible de charger le feed. Vérifie le serveur OnlyHate.';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [view, setView] = useState<View>('feed');
+  const [view, setView] = useState<View>('home');
   const [profileHandle, setProfileHandle] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [category, setCategory] = useState<string>('all');
   const [sort, setSort] = useState<'recent' | 'top'>('recent');
   const [status, setStatus] = useState('');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+  const [composerOpen, setComposerOpen] = useState(false);
 
   useEffect(() => {
     let isCurrent = true;
@@ -77,10 +79,16 @@ function App() {
     setView('profile');
   }, []);
 
+  const openAuth = useCallback((mode: 'login' | 'register') => {
+    setAuthMode(mode);
+    setView('auth');
+  }, []);
+
   const handleAuthed = (authUser: User, token: string) => {
     setToken(token);
     setUser(authUser);
     setStatus(`Bienvenue ${authUser.handle}. Le tribunal t’attend.`);
+    setView('home');
   };
 
   const handleLogout = async () => {
@@ -91,7 +99,7 @@ function App() {
     }
     clearToken();
     setUser(null);
-    setView('feed');
+    setView('home');
     setStatus('Déconnecté. Reste honorable.');
   };
 
@@ -107,7 +115,14 @@ function App() {
     setPosts((current) => [created, ...current]);
   };
 
+  const prependPostIfVisible = (created: Post) => {
+    setPosts((current) =>
+      category === 'all' || created.category === category ? [created, ...current] : current,
+    );
+  };
+
   const navItems: { label: string; target: View | 'logout' | 'own-profile' }[] = [
+    { label: 'Accueil', target: 'home' },
     { label: 'Feed', target: 'feed' },
     { label: 'Charte', target: 'charter' },
     ...(user ? [{ label: 'Mon profil', target: 'own-profile' as const }] : []),
@@ -129,7 +144,17 @@ function App() {
   return (
     <main className="app-shell">
       <nav className="topbar" aria-label="Navigation principale">
-        <a className="brand" href="#top" aria-label="OnlyHate accueil">
+        <a
+          className="brand"
+          href="#top"
+          aria-label="OnlyHate accueil"
+          onClick={(event) => {
+            if (view !== 'home') {
+              event.preventDefault();
+              setView('home');
+            }
+          }}
+        >
           <span className="brand-mark">OH</span>
           <span>OnlyHate</span>
         </a>
@@ -149,9 +174,18 @@ function App() {
               {user.avatar} Déconnexion
             </button>
           ) : (
-            <button type="button" className="button button-ghost" onClick={() => setView('feed')}>
-              Rejoindre
-            </button>
+            <>
+              <button type="button" className="nav-link" onClick={() => openAuth('login')}>
+                Connexion
+              </button>
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={() => openAuth('register')}
+              >
+                Créer un compte
+              </button>
+            </>
           )}
         </div>
       </nav>
@@ -180,7 +214,7 @@ function App() {
         <ModerationView onStatusChange={setStatus} />
       )}
 
-      {view === 'feed' && (
+      {view === 'home' && (
         <>
           <section className="hero" id="top">
             <div className="hero-copy">
@@ -191,12 +225,21 @@ function App() {
                 le post, jamais avec la personne.
               </p>
               <div className="hero-actions">
-                <a className="button button-primary" href="#publish">
+                <a
+                  className="button button-primary"
+                  href="#publish"
+                  onClick={(event) => {
+                    if (!user) {
+                      event.preventDefault();
+                      openAuth('register');
+                    }
+                  }}
+                >
                   Ouvrir le confessionnal
                 </a>
-                <a className="button button-secondary" href="#feed-list">
+                <button type="button" className="button button-secondary" onClick={() => setView('feed')}>
                   Voir les roasts
-                </a>
+                </button>
               </div>
             </div>
 
@@ -233,62 +276,144 @@ function App() {
             {authChecked && (user ? (
               <Composer user={user} onCreated={prependPost} onStatusChange={setStatus} />
             ) : (
-              <AuthPanel onAuthed={handleAuthed} onStatusChange={setStatus} />
+              <div className="publish-card">
+                <p className="eyebrow">Rejoindre le tribunal</p>
+                <h2>Connecte-toi pour publier ton fail.</h2>
+                <p className="hero-text">
+                  Crée ton compte, fixe tes limites et laisse la salle juger.
+                </p>
+                <div className="hero-actions">
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => openAuth('register')}
+                  >
+                    Créer un compte
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={() => openAuth('login')}
+                  >
+                    Connexion
+                  </button>
+                </div>
+                <p className="consent-note">
+                  Le premier compte créé devient modérateur de la plateforme.
+                </p>
+              </div>
             ))}
           </section>
-
-          <section className="feed-section" id="feed-list">
-            <div className="feed-controls">
-              <p className="eyebrow">Feed premium</p>
-              <div className="chip-row" role="group" aria-label="Filtrer par catégorie">
-                <button
-                  type="button"
-                  className={`chip${category === 'all' ? ' chip-active' : ''}`}
-                  onClick={() => setCategory('all')}
-                >
-                  Tout
-                </button>
-                {CATEGORIES.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className={`chip${category === item.key ? ' chip-active' : ''}`}
-                    onClick={() => setCategory(item.key)}
-                  >
-                    {item.emoji} {item.label}
-                  </button>
-                ))}
-              </div>
-              <label className="sort-row">
-                Tri
-                <select value={sort} onChange={(event) => setSort(event.target.value === 'top' ? 'top' : 'recent')}>
-                  <option value="recent">Récents</option>
-                  <option value="top">Top roasts</option>
-                </select>
-              </label>
-            </div>
-
-            {feedLoading ? (
-              <p className="empty-state">Chargement du tribunal...</p>
-            ) : posts.length === 0 ? (
-              <p className="empty-state">Aucun contenu dans cette catégorie. Le tribunal s’ennuie.</p>
-            ) : (
-              <div className="feed-grid">
-                {posts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    user={user}
-                    onPostUpdated={replacePost}
-                    onPostDeleted={removePost}
-                    onStatusChange={setStatus}
-                    onOpenProfile={openProfile}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
         </>
+      )}
+
+      {view === 'feed' && (
+        <section className="feed-section" id="feed-list">
+          <div className="feed-controls">
+            <p className="eyebrow">Feed premium</p>
+            <div className="chip-row" role="group" aria-label="Filtrer par catégorie">
+              <button
+                type="button"
+                className={`chip${category === 'all' ? ' chip-active' : ''}`}
+                onClick={() => setCategory('all')}
+              >
+                Tout
+              </button>
+              {CATEGORIES.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`chip${category === item.key ? ' chip-active' : ''}`}
+                  onClick={() => setCategory(item.key)}
+                >
+                  {item.emoji} {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="sort-row" role="group" aria-label="Trier le feed">
+              <span>Tri</span>
+              <button
+                type="button"
+                className={`chip${sort === 'recent' ? ' chip-active' : ''}`}
+                onClick={() => setSort('recent')}
+              >
+                Récents
+              </button>
+              <button
+                type="button"
+                className={`chip${sort === 'top' ? ' chip-active' : ''}`}
+                onClick={() => setSort('top')}
+              >
+                Top roasts
+              </button>
+            </div>
+          </div>
+
+          {feedLoading ? (
+            <p className="empty-state">Chargement du tribunal...</p>
+          ) : posts.length === 0 ? (
+            <p className="empty-state">Aucun contenu dans cette catégorie. Le tribunal s’ennuie.</p>
+          ) : (
+            <div className="feed-grid">
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  user={user}
+                  onPostUpdated={replacePost}
+                  onPostDeleted={removePost}
+                  onStatusChange={setStatus}
+                  onOpenProfile={openProfile}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {view === 'feed' && user && (
+        <button
+          type="button"
+          className="fab"
+          aria-label="Créer un post"
+          onClick={() => setComposerOpen(true)}
+        >
+          +
+        </button>
+      )}
+
+      {view === 'feed' && user && composerOpen && (
+        <div className="composer-overlay">
+          <section className="composer-float" role="dialog" aria-label="Créer un post">
+            <button
+              type="button"
+              className="composer-close"
+              aria-label="Fermer le formulaire"
+              onClick={() => setComposerOpen(false)}
+            >
+              ×
+            </button>
+            <Composer
+              user={user}
+              onCreated={(created) => {
+                prependPostIfVisible(created);
+                setComposerOpen(false);
+              }}
+              onStatusChange={setStatus}
+            />
+          </section>
+        </div>
+      )}
+
+      {view === 'auth' && (
+        <section className="auth-view">
+          <AuthPanel
+            mode={authMode}
+            onModeChange={setAuthMode}
+            onAuthed={handleAuthed}
+            onStatusChange={setStatus}
+          />
+        </section>
       )}
     </main>
   );

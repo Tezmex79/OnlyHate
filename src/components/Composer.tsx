@@ -71,23 +71,28 @@ function Composer({ user, onCreated, onStatusChange }: ComposerProps) {
   };
 
   return (
-    <form className="publish-card" onSubmit={handleSubmit}>
+    <form className="publish-card" id="publish" onSubmit={handleSubmit}>
       <p className="eyebrow">Créer un post · {user.handle}</p>
       <h2>Propose un contenu à roast.</h2>
       <label>
         Titre
         <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex: mon pitch startup mérite le pilori" maxLength={120} />
       </label>
-      <label>
-        Catégorie
-        <select value={category} onChange={(event) => setCategory(event.target.value)}>
+      <div className="field-chips" role="group" aria-label="Catégorie du post">
+        <span>Catégorie</span>
+        <div className="chip-row">
           {CATEGORIES.map((item) => (
-            <option key={item.key} value={item.key}>
+            <button
+              key={item.key}
+              type="button"
+              className={`chip${category === item.key ? ' chip-active' : ''}`}
+              onClick={() => setCategory(item.key)}
+            >
               {item.emoji} {item.label}
-            </option>
+            </button>
           ))}
-        </select>
-      </label>
+        </div>
+      </div>
       <label>
         Contexte consenti
         <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Décris ce que les gens peuvent moquer, et ce qui reste hors limites." rows={5} maxLength={520} />

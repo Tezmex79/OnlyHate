@@ -3,14 +3,15 @@ import type { User } from '../types';
 import { login, register } from '../api';
 
 type AuthPanelProps = {
+  mode: 'login' | 'register';
+  onModeChange: (mode: 'login' | 'register') => void;
   onAuthed: (user: User, token: string) => void;
   onStatusChange: (status: string) => void;
 };
 
 const AVATARS = ['😈', '🔥', '🍝', '🧦', '⚽', '💀', '🍳', '🗿'];
 
-function AuthPanel({ onAuthed, onStatusChange }: AuthPanelProps) {
-  const [mode, setMode] = useState<'login' | 'register'>('register');
+function AuthPanel({ mode, onModeChange, onAuthed, onStatusChange }: AuthPanelProps) {
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
   const [avatar, setAvatar] = useState(AVATARS[0]);
@@ -51,7 +52,7 @@ function AuthPanel({ onAuthed, onStatusChange }: AuthPanelProps) {
           role="tab"
           aria-selected={mode === 'register'}
           className={`tab${mode === 'register' ? ' tab-active' : ''}`}
-          onClick={() => setMode('register')}
+          onClick={() => onModeChange('register')}
         >
           Inscription
         </button>
@@ -60,7 +61,7 @@ function AuthPanel({ onAuthed, onStatusChange }: AuthPanelProps) {
           role="tab"
           aria-selected={mode === 'login'}
           className={`tab${mode === 'login' ? ' tab-active' : ''}`}
-          onClick={() => setMode('login')}
+          onClick={() => onModeChange('login')}
         >
           Connexion
         </button>

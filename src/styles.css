@@ -343,6 +343,13 @@ label {
   font-weight: 800;
 }
 
+.field-chips {
+  display: grid;
+  gap: 8px;
+  color: #f5e8f3;
+  font-weight: 800;
+}
+
 input,
 textarea {
   width: 100%;
@@ -362,7 +369,64 @@ textarea:focus {
 }
 
 .feed-section {
+  margin-top: 34px;
   padding-bottom: 30px;
+}
+
+.fab {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff8fb;
+  background: linear-gradient(135deg, var(--hot), var(--hot-2));
+  box-shadow: 0 14px 34px rgba(255, 61, 129, 0.45);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fab:hover {
+  filter: brightness(1.08);
+}
+
+.composer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 2, 8, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.composer-float {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.composer-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  background: rgba(10, 5, 15, 0.85);
+  cursor: pointer;
 }
 
 .section-heading {
@@ -494,6 +558,11 @@ textarea:focus {
   background: var(--panel);
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(18px);
+}
+
+.auth-view {
+  max-width: 520px;
+  margin: 34px auto 0;
 }
 
 .page-title {
@@ -983,6 +1052,11 @@ textarea:focus {
   .button,
   .reaction-row button {
     width: 100%;
+  }
+
+  .nav-actions .button {
+    width: auto;
+    flex-shrink: 0;
   }
 
   .hero-actions,
