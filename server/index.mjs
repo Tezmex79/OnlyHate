@@ -14,6 +14,7 @@ const uploadsDir = process.env.ONLYHATE_UPLOADS_DIR ?? path.join(dataDir, 'uploa
 const distDir = path.join(rootDir, 'dist');
 const port = Number(process.env.PORT ?? 8787);
 
+await mkdir(dataDir, { recursive: true });
 const db = openDatabase(dbPath);
 
 const CATEGORIES = new Set(['tech', 'food', 'style', 'sport', 'libre']);
