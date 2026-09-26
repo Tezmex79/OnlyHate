@@ -1,0 +1,8 @@
+{
+  "appId": "com.onlyhate.app",
+  "appName": "OnlyHate",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
