@@ -1,5 +1,23 @@
 export type ReactionKey = 'brulure' | 'cringe' | 'ko';
 
+export type CommunityStats = {
+  users: number;
+  posts: number;
+  comments: number;
+  reactions: number;
+  reactionSplit: Record<ReactionKey, number>;
+  topRoast: {
+    id: string;
+    title: string;
+    body: string;
+    category: string;
+    createdAt: number;
+    totalReactions: number;
+    author: { id: string; handle: string; avatar: string };
+    reactions: Record<ReactionKey, number>;
+  } | null;
+};
+
 export type User = {
   id: string;
   handle: string;

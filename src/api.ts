@@ -1,4 +1,4 @@
-import type { Post, Profile, ReportItem, User } from './types';
+import type { CommunityStats, Post, Profile, ReportItem, User } from './types';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 const TOKEN_KEY = 'onlyhate_token';
@@ -52,6 +52,8 @@ export const login = (input: { handle: string; password: string }) =>
 export const logout = () => api<{ ok: true }>('/api/auth/logout', { method: 'POST' });
 
 export const fetchMe = () => api<{ user: User | null }>('/api/me');
+
+export const fetchStats = () => api<{ stats: CommunityStats }>('/api/stats');
 
 export const fetchPosts = (category: string | null, sort: 'recent' | 'top') =>
   api<{ posts: Post[] }>(

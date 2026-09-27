@@ -254,19 +254,53 @@ h3 {
   font-size: 2rem;
 }
 
+.panel-stats {
+  display: flex;
+  gap: 28px;
+}
+
+.panel-stats strong {
+  display: block;
+  color: #fff;
+  font-size: 1.45rem;
+}
+
+.panel-stats span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .meter {
+  display: flex;
   height: 16px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
 }
 
-.meter span {
+.meter-seg {
   display: block;
-  width: 78%;
   height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--cyan), var(--violet), var(--hot));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.meter-seg-brulure {
+  background: var(--hot);
+}
+
+.meter-seg-cringe {
+  background: var(--violet);
+}
+
+.meter-seg-ko {
+  background: var(--cyan);
+}
+
+.meter-legend {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .featured-card {
@@ -375,22 +409,29 @@ textarea:focus {
 
 .fab {
   position: fixed;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
+  /* calé sur le bord droit de .app-shell (min(1180px, 100% - 32px)) ; les %
+     de position:fixed se résolvent sur le viewport, même base que le shell */
+  right: max(16px, calc((100% - 1180px) / 2));
+  bottom: max(24px, env(safe-area-inset-bottom));
   z-index: 40;
-  display: grid;
-  width: 56px;
-  height: 56px;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 22px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   color: #fff8fb;
   background: linear-gradient(135deg, var(--hot), var(--hot-2));
   box-shadow: 0 14px 34px rgba(255, 61, 129, 0.45);
-  font-size: 1.9rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+.fab-plus {
+  font-size: 1.35rem;
 }
 
 .fab:hover {
@@ -994,6 +1035,10 @@ textarea:focus {
 @media (max-width: 880px) {
   .app-shell {
     width: min(100% - 20px, 680px);
+  }
+
+  .fab {
+    right: max(10px, calc((100% - 680px) / 2));
   }
 
   .topbar,

@@ -815,9 +815,67 @@ const handleAdmin = async (request, response, requestUrl) => {
   notFound(response);
 };
 
+const handleStats = async (request, response) => {
+  const users = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  const posts = db.prepare('SELECT COUNT(*) AS n FROM posts WHERE hidden = 0').get().n;
+  const comments = db.prepare('SELECT COUNT(*) AS n FROM comments WHERE hidden = 0').get().n;
+
+  const splitRows = db.prepare('SELECT key, COUNT(*) AS n FROM reactions GROUP BY key').all();
+  const reactionSplit = { brulure: 0, cringe: 0, ko: 0 };
+  for (const row of splitRows) {
+    if (row.key in reactionSplit) {
+      reactionSplit[row.key] = row.n;
+    }
+  }
+  const reactions = reactionSplit.brulure + reactionSplit.cringe + reactionSplit.ko;
+
+  const topRow = db
+    .prepare(
+      `SELECT p.id, p.title, p.body, p.category, p.created_at,
+              u.id AS author_id, u.handle AS author_handle, u.avatar AS author_avatar,
+              (SELECT COUNT(*) FROM reactions r WHERE r.post_id = p.id) AS total
+       FROM posts p JOIN users u ON u.id = p.author_id
+       WHERE p.hidden = 0
+       ORDER BY total DESC, p.created_at DESC LIMIT 1`,
+    )
+    .get();
+
+  let topRoast = null;
+  if (topRow) {
+    const topSplitRows = db
+      .prepare('SELECT key, COUNT(*) AS n FROM reactions WHERE post_id = ? GROUP BY key')
+      .all(topRow.id);
+    const topSplit = { brulure: 0, cringe: 0, ko: 0 };
+    for (const row of topSplitRows) {
+      if (row.key in topSplit) {
+        topSplit[row.key] = row.n;
+      }
+    }
+    topRoast = {
+      id: topRow.id,
+      title: topRow.title,
+      body: topRow.body,
+      category: topRow.category,
+      createdAt: topRow.created_at,
+      totalReactions: topRow.total,
+      author: { id: topRow.author_id, handle: `@${topRow.author_handle}`, avatar: topRow.author_avatar },
+      reactions: topSplit,
+    };
+  }
+
+  sendJson(response, 200, {
+    stats: { users, posts, comments, reactions, reactionSplit, topRoast },
+  });
+};
+
 const handleApi = async (request, response, requestUrl) => {
   if (requestUrl.pathname === '/api/health' && request.method === 'GET') {
     sendJson(response, 200, { ok: true });
+    return;
+  }
+
+  if (requestUrl.pathname === '/api/stats' && request.method === 'GET') {
+    await handleStats(request, response);
     return;
   }
 

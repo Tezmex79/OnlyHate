@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Post, User } from './types';
-import { CATEGORIES } from './constants';
-import { clearToken, fetchMe, fetchPosts, logout, setToken } from './api';
+import { useCallback, useEffect, useState } from 'react';
+import type { CommunityStats, Post, ReactionKey, User } from './types';
+import { CATEGORIES, REACTIONS, categoryEmoji, categoryLabel, formatAge } from './constants';
+import { clearToken, fetchMe, fetchPosts, fetchStats, logout, setToken } from './api';
 import AuthPanel from './components/AuthPanel';
 import Composer from './components/Composer';
 import PostCard from './components/PostCard';
@@ -19,6 +19,7 @@ function App() {
   const [view, setView] = useState<View>('home');
   const [profileHandle, setProfileHandle] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
+  const [stats, setStats] = useState<CommunityStats | null>(null);
   const [feedLoading, setFeedLoading] = useState(true);
   const [category, setCategory] = useState<string>('all');
   const [sort, setSort] = useState<'recent' | 'top'>('recent');
@@ -64,15 +65,19 @@ function App() {
     };
   }, [category, sort, user]);
 
-  const totalReactions = useMemo(
-    () =>
-      posts.reduce(
-        (sum, post) =>
-          sum + Object.values(post.reactions).reduce((postSum, count) => postSum + count, 0),
-        0,
-      ),
-    [posts],
-  );
+  useEffect(() => {
+    let isCurrent = true;
+    fetchStats()
+      .then(({ stats: next }) => {
+        if (isCurrent) setStats(next);
+      })
+      .catch(() => {
+        // Panneau décoratif : on garde les zéros plutôt qu'une bannière d'erreur.
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [user]);
 
   const openProfile = useCallback((handle: string) => {
     setProfileHandle(handle);
@@ -104,21 +109,37 @@ function App() {
   };
 
   const replacePost = (updated: Post) => {
+    const previous = posts.find((post) => post.id === updated.id);
     setPosts((current) => current.map((post) => (post.id === updated.id ? updated : post)));
+    if (!previous) return;
+    setStats((current) => {
+      if (!current) return current;
+      const reactionSplit = { ...current.reactionSplit };
+      let delta = 0;
+      (Object.keys(reactionSplit) as ReactionKey[]).forEach((key) => {
+        const diff = updated.reactions[key] - previous.reactions[key];
+        reactionSplit[key] += diff;
+        delta += diff;
+      });
+      return { ...current, reactions: current.reactions + delta, reactionSplit };
+    });
   };
 
   const removePost = (postId: string) => {
     setPosts((current) => current.filter((post) => post.id !== postId));
+    setStats((current) => (current ? { ...current, posts: Math.max(0, current.posts - 1) } : current));
   };
 
   const prependPost = (created: Post) => {
     setPosts((current) => [created, ...current]);
+    setStats((current) => (current ? { ...current, posts: current.posts + 1 } : current));
   };
 
   const prependPostIfVisible = (created: Post) => {
     setPosts((current) =>
       category === 'all' || created.category === category ? [created, ...current] : current,
     );
+    setStats((current) => (current ? { ...current, posts: current.posts + 1 } : current));
   };
 
   const navItems: { label: string; target: View | 'logout' | 'own-profile' }[] = [
@@ -246,15 +267,66 @@ function App() {
             <aside className="hero-panel" aria-label="Aperçu live">
               <div className="panel-header">
                 <span>Live hate-o-meter</span>
-                <strong>{totalReactions.toLocaleString('fr-FR')}</strong>
+                <strong>{(stats?.reactions ?? 0).toLocaleString('fr-FR')}</strong>
+              </div>
+              <div className="panel-stats">
+                <div>
+                  <strong>{(stats?.users ?? 0).toLocaleString('fr-FR')}</strong>
+                  <span>membres</span>
+                </div>
+                <div>
+                  <strong>{(stats?.posts ?? 0).toLocaleString('fr-FR')}</strong>
+                  <span>fails</span>
+                </div>
+                <div>
+                  <strong>{(stats?.comments ?? 0).toLocaleString('fr-FR')}</strong>
+                  <span>commentaires</span>
+                </div>
               </div>
               <div className="meter" aria-hidden="true">
-                <span />
+                {REACTIONS.map(({ key }) => (
+                  <span
+                    key={key}
+                    className={`meter-seg meter-seg-${key}`}
+                    style={{
+                      width:
+                        stats && stats.reactions > 0
+                          ? `${(stats.reactionSplit[key] / stats.reactions) * 100}%`
+                          : '0%',
+                    }}
+                  />
+                ))}
               </div>
+              <p className="meter-legend">
+                {REACTIONS.map(({ key, emoji }, index) => (
+                  <span key={key}>
+                    {index > 0 && ' · '}
+                    {emoji} {(stats?.reactionSplit[key] ?? 0).toLocaleString('fr-FR')}
+                  </span>
+                ))}
+              </p>
               <div className="featured-card">
                 <span className="badge">Top roast</span>
-                <h2>“Ton logo respire la réunion Teams non préparée.”</h2>
-                <p>Validé par la cible · 92% drôle · 0% haine réelle</p>
+                {stats?.topRoast ? (
+                  <>
+                    <h2>“{stats.topRoast.title}”</h2>
+                    <p>
+                      <button
+                        type="button"
+                        className="link-author"
+                        onClick={() => openProfile(stats!.topRoast!.author.handle)}
+                      >
+                        {stats.topRoast.author.handle}
+                      </button>
+                      {' · '}
+                      {categoryEmoji(stats.topRoast.category)} {categoryLabel(stats.topRoast.category)} ·{' '}
+                      il y a {formatAge(stats.topRoast.createdAt)} · {stats.topRoast.totalReactions}{' '}
+                      réaction{stats.topRoast.totalReactions > 1 ? 's' : ''}
+                    </p>
+                  </>
+                ) : (
+                  <h2>Pas encore de roast. Ouvre le confessionnal.</h2>
+                )}
               </div>
             </aside>
           </section>
@@ -375,10 +447,12 @@ function App() {
         <button
           type="button"
           className="fab"
-          aria-label="Créer un post"
           onClick={() => setComposerOpen(true)}
         >
-          +
+          <span className="fab-plus" aria-hidden="true">
+            +
+          </span>
+          Nouveau post
         </button>
       )}
 
